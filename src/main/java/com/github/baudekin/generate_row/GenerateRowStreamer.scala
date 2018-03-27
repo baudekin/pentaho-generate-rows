@@ -25,6 +25,7 @@
 package com.github.baudekin.generate_row
 
 import org.apache.spark.SparkContext
+import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.sql.execution.streaming.MemoryStream
 import org.apache.spark.sql.streaming.{OutputMode, StreamingQuery}
@@ -133,6 +134,10 @@ class GenerateRowStreamer(stepId: String,
 
   def waitOnStreamToTerminate(seconds: Long): Unit = synchronized {
     queryStream.awaitTermination(seconds)
+  }
+
+  def stopStream(): Unit = synchronized {
+    queryStream.stop();
   }
 }
 
