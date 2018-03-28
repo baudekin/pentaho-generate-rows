@@ -33,9 +33,9 @@ import scala.collection.immutable.List;
 import java.util.ArrayList;
 import java.util.stream.IntStream;
 
-import com.github.baudekin.generate_row.GenerateRowStreamer;
 
 public class GenerateRowWrapper {
+
   private com.github.baudekin.generate_row.GenerateRowStreamer grs;
 
   public GenerateRowWrapper() {
@@ -52,7 +52,7 @@ public class GenerateRowWrapper {
     List<String> types = toScalaList( typeArr );
     List<String> values = toScalaList( valueArr );
 
-    this.grs = new GenerateRowStreamer( stepId, names, types, values );
+    this.grs = new com.github.baudekin.generate_row.GenerateRowStreamer( stepId, names, types, values );
 
     // Create Large set of data
     // TODO: Paralellize it ???
