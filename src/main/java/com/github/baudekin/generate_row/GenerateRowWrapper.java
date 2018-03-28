@@ -29,6 +29,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import scala.collection.JavaConverters;
 import scala.collection.immutable.List;
+import scala.tools.nsc.backend.icode.analysis.TypeFlowAnalysis;
 
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -72,7 +73,8 @@ public class GenerateRowWrapper {
    * @param stepName = Unique string that is assumed to be the PDI UI Step name
    */
   public GenerateRowWrapper( String stepName ) {
-    this.stepId.set( stepName );
+    //TODO spaces are the only character we need to convert to make the stepName  view name compliant.
+    this.stepId.set( stepName.replace( " ", "_" ) );
   }
 
    /** Helper method for converting primitive String array to scala list. Scala immutable lists are main data transfer
@@ -111,7 +113,7 @@ public class GenerateRowWrapper {
 
     // Create Large set of data
     // TODO: Paralellise it ??? The data is the same and the order does not matter
-    IntStream.range( 1, limit ).forEach( index -> grs.addRow() );
+    IntStream.range( 1, limit + 1 ).forEach( index -> grs.addRow() );
 
     Dataset<Row> dsRows = grs.getRddStream();
 
@@ -256,5 +258,21 @@ public class GenerateRowWrapper {
   public void stopContinousStreaming() {
     // Causes thread to exit correctly
     this.streamRows.set( false );
+  }
+
+   /** main for running integration test of GenerateRowWrapper as a spark application.
+    *
+    * @param args
+    */
+  public static void main(String[] args) {
+    GenerateRowWrapper grw1 = new GenerateRowWrapper( "Step One" );
+    GenerateRowWrapper grw2 = new GenerateRowWrapper( "Step Two" );
+    GenerateRowWrapper grw3 = new GenerateRowWrapper( "Step Three" );
+
+    String[] names = { "ColumnOne", "ColumnTwo", "ColumnThree" };
+    String[] types = { "String", "Int", "Double" };
+    String[] values = { "Value", "200", "303.33" };
+    JavaRDD<Row> rdd1 = grw1.createLimitedData( names, types, values, 100);
+    rdd1.collect().forEach( System.out::println );
   }
 }
