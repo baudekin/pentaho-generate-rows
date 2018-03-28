@@ -25,11 +25,11 @@
 package com.github.baudekin.generate_row
 
 import org.apache.spark.SparkContext
-import org.apache.spark.api.java.JavaRDD
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.sql.execution.streaming.MemoryStream
 import org.apache.spark.sql.streaming.{OutputMode, StreamingQuery}
 
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 
 // Get rid of advanced feature warnings for using Scala 2.11 or greater
@@ -56,6 +56,12 @@ class GenerateRowStreamer(stepId: String,
   // Zip up the column names and values to create key value
   // Map with the column names being the key
   private val mapData = (columnNames zip columnValues) toMap
+  def getMapData: java.util.Map[String, String] = synchronized {
+    mapData.asJava
+  }
+  def getSchema: java.util.Map[String, String] = synchronized {
+    schemaData.asJava
+  }
   private val schemaData = (columnNames zip columnTypes) toMap
   // Prime the stream and set the RDD to pass back
   private val rddStream: DataFrame = primeRddStream()
