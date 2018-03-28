@@ -53,7 +53,10 @@
       <plugin>
         <groupId>org.scala-tools</groupId>
         <artifactId>maven-scala-plugin</artifactId>
+        <version>2.15.2</version>
         <executions>
+          <!-- Define an id so we can call in process-resources phase -->
+          <!-- This enables us to compile the scala code before the java code.-->
           <execution>
             <id>compile</id>
             <goals>
