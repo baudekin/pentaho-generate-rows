@@ -262,6 +262,10 @@ public class GenerateRowWrapper {
     * @param args - Not used
     */
   public static void main( String[] args ) {
+    int numberOfSecondsToRunStreams = 60; // Default a minute
+    if ( args.length > 0 ) {
+      numberOfSecondsToRunStreams = Integer.valueOf( args[0] );
+    }
     // Smoke test limit
     GenerateRowWrapper grw1 = new GenerateRowWrapper( "Step One" );
     GenerateRowWrapper grw2 = new GenerateRowWrapper( "Step Two" );
@@ -284,7 +288,7 @@ public class GenerateRowWrapper {
     grw3.startContinuousStreaming();
 
     // Let capture the outputs of  streams for one minute
-    for ( int i = 0; i < 60; i++ ) {
+    for ( int i = 0; i < numberOfSecondsToRunStreams; i++ ) {
       // "clone" the rdd
       // TODO should I create a helper select that only returns one row?
       // TODO should I create a call back function that works of the timer instead of polling?
