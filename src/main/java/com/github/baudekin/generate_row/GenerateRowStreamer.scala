@@ -50,6 +50,8 @@ class GenerateRowStreamer(stepId: String,
   // These are variables not values do to the complexity
   // of creating these. They are created as a side effect
   // to running primeRddStream()
+  // Scala not val(s) do not change after being assigned.
+  // Scala var can be reassigned.
   private var memoryStreamMaps: MemoryStream[MemMap] = _
   private var queryStream: StreamingQuery = _
 
@@ -62,6 +64,7 @@ class GenerateRowStreamer(stepId: String,
   def getSchema: java.util.Map[String, String] = synchronized {
     schemaData.asJava
   }
+  // Generate schemaMap
   private val schemaData = (columnNames zip columnTypes) toMap
   // Prime the stream and set the RDD to pass back
   private val rddStream: DataFrame = primeRddStream()
@@ -73,7 +76,9 @@ class GenerateRowStreamer(stepId: String,
     }
 
     // Required to implicit to setup behind the scenes resolutions must
-    // be defined before memoryStreamMaps and query
+    // be defined before memoryStreamMaps and query. The scala implicit key word
+    // enable implicit conversions when the class is in scope. In this case
+    // when SparkContext is visiable.
     implicit val isc: SparkContext = {
       spark.sparkContext
     }
@@ -159,12 +164,11 @@ object GenerateRowStreamer {
     val types: List[String] = "String" :: "Integer" :: "Double" :: Nil
 
     val grs:GenerateRowStreamer = new GenerateRowStreamer("My_Step_ID", names, types, values)
-    val rdd: DataFrame = grs.getRddStream
+    val rdd: DataFrame = grs.getRddStream;
     grs.addRow()
     rdd.show()
-    val javaRdd = rdd.toJavaRDD
 
-    for  (i:Int <- 1 to 100){
+    for ( i:Int <- 1 to 100 ){
       val intStr:String = i.toString
       val doubleStr:String= (i + 0.9998).toString
       val values: List[String] = "This is a modified data set." :: intStr :: doubleStr :: Nil
@@ -173,8 +177,9 @@ object GenerateRowStreamer {
 
     grs.processAllPendingAdditions()
     rdd.show(false)
-    val res = javaRdd.reduce( (r1:Row, r2:Row) => if (r1.getInt(2) > r2.getInt(2)) r1 else r2 )
+    val res = rdd.reduce( (r1:Row, r2:Row) => if (r1.getInt(1) > r2.getInt(1)) r1 else r2 )
     println("Result:" + res)
+
     spark.stop()
   }
 }
