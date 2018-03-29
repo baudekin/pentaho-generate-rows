@@ -24,13 +24,12 @@
  */
 package com.github.baudekin.generate_row;
 
-import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import scala.collection.JavaConverters;
 import scala.collection.immutable.List;
-import scala.tools.nsc.backend.icode.analysis.TypeFlowAnalysis;
 
+import javax.validation.constraints.NotNull;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -84,7 +83,7 @@ public class GenerateRowWrapper {
     * @param primitiveStringArr - Array of strings
     * @return - scala List of strings with the same value and order as the input array.
     */
-  private scala.collection.immutable.List<String> toScalaList( String[] primitiveStringArr ) {
+  private scala.collection.immutable.List<String> toScalaList( @NotNull String[] primitiveStringArr ) {
     ArrayList<String> arrList = new ArrayList<>( primitiveStringArr.length );
     for ( String name: primitiveStringArr ) {
       arrList.add( name );
@@ -102,7 +101,7 @@ public class GenerateRowWrapper {
     * @return - JavaRDD of type row with the generated values. A spark action such as collect has not been
     * performed on this data set.
     */
-  public Dataset<Row> createLimitedData( String[] nameArr, String[] typeArr, String[] valueArr, int limit) {
+  public Dataset<Row> createLimitedData( String[] nameArr, String[] typeArr, String[] valueArr, int limit ) {
     // TODO: Verify the PDI UI is supposed to verify the arrays are equal and have values.
     List<String> names = toScalaList( nameArr );
     // TODO Determine if we can use the PDI UI types directly. If not convert them to the spark types.
@@ -188,9 +187,7 @@ public class GenerateRowWrapper {
     List<String> values = JavaConverters.asScalaBufferConverter( valueList ).asScala().toList();
 
     this.grs = new GenerateRowStreamer( stepId.get(), names, types, values );
-
-    Dataset<Row> dsRows = grs.getRddStream();
-    return dsRows;
+    return grs.getRddStream();
   }
 
    // TODO: Verify this is true in AEL and if it is remove the thread.
@@ -262,9 +259,9 @@ public class GenerateRowWrapper {
 
    /** main for running integration test of GenerateRowWrapper as a spark application.
     *
-    * @param args
+    * @param args - Not used
     */
-  public static void main(String[] args) {
+  public static void main( String[] args ) {
     // Smoke test limit
     GenerateRowWrapper grw1 = new GenerateRowWrapper( "Step One" );
     GenerateRowWrapper grw2 = new GenerateRowWrapper( "Step Two" );
@@ -273,11 +270,11 @@ public class GenerateRowWrapper {
     String[] names = { "ColumnOne", "ColumnTwo", "ColumnThree" };
     String[] types = { "String", "Int", "Double" };
     String[] values = { "Value", "200", "303.33" };
-    Dataset<Row> rdd1 = grw1.createLimitedData( names, types, values, 100);
+    Dataset<Row> rdd1 = grw1.createLimitedData( names, types, values, 100 );
     rdd1.javaRDD().collect().forEach( System.out::println );
     System.out.println( "Count=" + rdd1.count() );
 
-    // Smoke test runing two streams a the same time.
+    // Smoke test running two streams a the same time.
     Dataset<Row> rdd2 = grw2.setupContinuousStreaming( names,
       types, values, "Now", "TwoSecondsAgo", 2000 );
     Dataset<Row> rdd3 = grw3.setupContinuousStreaming( names,
@@ -286,23 +283,22 @@ public class GenerateRowWrapper {
     grw2.startContinuousStreaming();
     grw3.startContinuousStreaming();
 
-    // Let catpture the outputs of  streams for one minute
-    for ( int i=0; i<60; i++ ) {
+    // Let capture the outputs of  streams for one minute
+    for ( int i = 0; i < 60; i++ ) {
       // "clone" the rdd
       // TODO should I create a helper select that only returns one row?
       // TODO should I create a call back function that works of the timer instead of polling?
-      Dataset<Row> rdd2c = rdd2.select("Now", "TwoSecondsAgo");
-      Dataset<Row> rdd3c = rdd3.select("Now", "FourSecondsAgo");
-      System.out.println("rdd2c count:" + rdd2c.count());
-      System.out.println("rdd3c count:" + rdd3c.count());
+      Dataset<Row> rdd2c = rdd2.select( "Now", "TwoSecondsAgo" );
+      Dataset<Row> rdd3c = rdd3.select( "Now", "FourSecondsAgo" );
+      System.out.println( "rdd2c count:" + rdd2c.count() );
+      System.out.println( "rdd3c count:" + rdd3c.count() );
       try {
-        Thread.sleep(1000);
-      } catch (java.lang.InterruptedException ex ) {
+        Thread.sleep( 1000 );
+      } catch ( java.lang.InterruptedException ex ) {
         // ignore
       }
     }
     grw2.stopContinousStreaming();
     grw3.stopContinousStreaming();
-
   }
 }
