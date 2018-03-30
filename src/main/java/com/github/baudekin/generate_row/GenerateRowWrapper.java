@@ -211,7 +211,7 @@ public class GenerateRowWrapper {
 
         // Adjust the value list to reflect the new current and previous times get a copy
         // of the current list.
-        ArrayList<String> valueList = (ArrayList<String>)lastRow.get().clone();
+        ArrayList<String> valueList = (ArrayList<String>) lastRow.get().clone();
         // Get the last current time and make the previous time
         valueList.set( valueList.size() - 2, valueList.get( valueList.size() - 1 ) );
         // Set the current time to current local timestamp.
@@ -226,11 +226,11 @@ public class GenerateRowWrapper {
         try {
           Thread.sleep( this.delay.get() );
         } catch ( java.lang.InterruptedException ex ) {
-          //TODO Verify we don't need TimeoutException|java.util.concurrent.TimeoutException ex) {
+          //TODO Verify we don't need TimeoutException|java.util.concurrent.TimeoutException ex) {: No
           // ignore
         }
       } // End of Loop
-    });
+    } );
     // Give the Thread meaningful name
     t.setName( stepId.get() + ":GenerateRow" );
     // Save it so we can have the calling process wait on it.
@@ -278,7 +278,7 @@ public class GenerateRowWrapper {
     String[] names = { "ColumnOne", "ColumnTwo", "ColumnThree" };
     String[] types = { "String", "Int", "Double" };
     String[] values = { "Value", "200", "303.33" };
-    System.out.println( "limit=" + numberOfRowsToGenerate);
+    System.out.println( "limit=" + numberOfRowsToGenerate );
     Dataset<Row> rdd1 = grw1.createLimitedData( names, types, values, numberOfRowsToGenerate );
     rdd1.javaRDD().collect().forEach( System.out::println );
     System.out.println( "Count=" + rdd1.count() );
