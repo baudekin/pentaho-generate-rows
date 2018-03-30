@@ -32,6 +32,7 @@ import scala.collection.immutable.List;
 import javax.validation.constraints.NotNull;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -71,8 +72,8 @@ public class GenerateRowWrapper {
    *
    * @param stepName = Unique string that is assumed to be the PDI UI Step name
    */
-  public GenerateRowWrapper( String stepName ) {
-    //TODO spaces are the only character we need to convert to make the stepName  view name compliant.
+  public GenerateRowWrapper( @NotNull String stepName ) {
+    //TODO spaces are the only character we need to convert to make the stepName  view name compliant. Use Hive conventions
     this.stepId.set( stepName.replace( " ", "_" ) );
   }
 
@@ -84,10 +85,8 @@ public class GenerateRowWrapper {
     * @return - scala List of strings with the same value and order as the input array.
     */
   private scala.collection.immutable.List<String> toScalaList( @NotNull String[] primitiveStringArr ) {
-    ArrayList<String> arrList = new ArrayList<>( primitiveStringArr.length );
-    for ( String name: primitiveStringArr ) {
-      arrList.add( name );
-    }
+    // In this case autoboxing gets in the way and primitive array elements must be explicitly converted.
+    java.util.List<String> arrList  = Arrays.<String>asList( primitiveStringArr );
     return JavaConverters.asScalaBufferConverter( arrList ).asScala().toList();
   }
 
@@ -109,15 +108,22 @@ public class GenerateRowWrapper {
     List<String> values = toScalaList( valueArr );
 
     this.grs = new com.github.baudekin.generate_row.GenerateRowStreamer( stepId.get(), names, types, values );
-
-    // Create Large set of data
-    // TODO: Paralellise it ??? The data is the same and the order does not matter
-    IntStream.range( 1, limit + 1 ).forEach( index -> grs.addRow() );
-
     Dataset<Row> dsRows = grs.getRddStream();
 
+    // Create Large set of data
+    // TODO: Paralellise it ??? The data is the same and the order does not matter: No we need the index for preformance reasons
+    IntStream.range( 1, limit + 1 ).forEach( index -> {
+      grs.addRow();
+      // Lets process after hundred rows
+      if ( ( index % 1200 ) == 0 ) {
+        grs.processAllPendingAdditions();
+      }
+    } );
+    grs.processAllPendingAdditions();
+
+
     // Process all the rows we just added
-    // TODO on large scale should we run processAllPendingAdditons ever so many rows???
+    // TODO on large scale should we run processAllPendingAdditons ever so many rows: Yes for performance reasons.
     grs.processAllPendingAdditions();
 
     // Free up streaming resources the RDD will remain around
@@ -158,26 +164,20 @@ public class GenerateRowWrapper {
     this.delay.set( delay );
     java.util.List<String> nameList =  new ArrayList<>( nameArr.length + 2 );
     // TODO this assumes PDI UI does not put these fields into the arrays already. Verify how PDI UI does this.
-    // TODO After the above is answered determine if the array to list conversions below should be do with helper method
+    // TODO After the above is answered determine if the array to list conversions below should be do with helper method: no
     nameList.add( curTimeFieldName );
     nameList.add( prevTimeFieldName );
-    for ( String name : nameArr ) {
-      nameList.add( name );
-    }
+    nameList.addAll( Arrays.<String>asList( nameArr ) );
 
     java.util.List<String> typeList =  new ArrayList<>( typeArr.length + 2 );
     typeList.add( "String" );
     typeList.add( "String" );
-    for ( String typeValue: typeArr ) {
-      typeList.add( typeValue );
-    }
+    typeList.addAll( Arrays.<String>asList( typeArr ) );
 
     ArrayList<String> valueList = new ArrayList<>( valueArr.length + 2 );
     valueList.add( "null" );
     valueList.add( "null" );
-    for ( String value: valueArr ) {
-     valueList.add( value );
-    }
+    valueList.addAll( Arrays.<String>asList( valueArr ) );
 
     this.lastRow.set( valueList );
 
@@ -266,6 +266,10 @@ public class GenerateRowWrapper {
     if ( args.length > 0 ) {
       numberOfSecondsToRunStreams = Integer.valueOf( args[0] );
     }
+    int numberOfRowsToGenerate = 1000; // Default a minute
+    if ( args.length > 1 ) {
+      numberOfRowsToGenerate = Integer.valueOf( args[1] );
+    }
     // Smoke test limit
     GenerateRowWrapper grw1 = new GenerateRowWrapper( "Step One" );
     GenerateRowWrapper grw2 = new GenerateRowWrapper( "Step Two" );
@@ -274,9 +278,12 @@ public class GenerateRowWrapper {
     String[] names = { "ColumnOne", "ColumnTwo", "ColumnThree" };
     String[] types = { "String", "Int", "Double" };
     String[] values = { "Value", "200", "303.33" };
-    Dataset<Row> rdd1 = grw1.createLimitedData( names, types, values, 100 );
+    System.out.println( "limit=" + numberOfRowsToGenerate);
+    Dataset<Row> rdd1 = grw1.createLimitedData( names, types, values, numberOfRowsToGenerate );
     rdd1.javaRDD().collect().forEach( System.out::println );
     System.out.println( "Count=" + rdd1.count() );
+
+    /*
 
     // Smoke test running two streams a the same time.
     Dataset<Row> rdd2 = grw2.setupContinuousStreaming( names,
@@ -290,7 +297,7 @@ public class GenerateRowWrapper {
     // Let capture the outputs of  streams for one minute
     for ( int i = 0; i < numberOfSecondsToRunStreams; i++ ) {
       // "clone" the rdd
-      // TODO should I create a helper select that only returns one row?
+      // TODO should I create a helper select that only returns one row?: yes base on Restful service Use case
       // TODO should I create a call back function that works of the timer instead of polling?
       Dataset<Row> rdd2c = rdd2.select( "Now", "TwoSecondsAgo" );
       Dataset<Row> rdd3c = rdd3.select( "Now", "FourSecondsAgo" );
@@ -304,5 +311,6 @@ public class GenerateRowWrapper {
     }
     grw2.stopContinousStreaming();
     grw3.stopContinousStreaming();
+    */
   }
 }
