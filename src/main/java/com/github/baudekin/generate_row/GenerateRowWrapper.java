@@ -213,9 +213,9 @@ public class GenerateRowWrapper {
         // of the current list.
         ArrayList<String> valueList = (ArrayList<String>) lastRow.get().clone();
         // Get the last current time and make the previous time
-        valueList.set( valueList.size() - 2, valueList.get( valueList.size() - 1 ) );
+        valueList.set(1, valueList.get( 0 ) );
         // Set the current time to current local timestamp.
-        valueList.set( valueList.size() - 1,
+        valueList.set( 0,
           LocalDateTime.now().format( DateTimeFormatter.ofPattern( "yyyy/MM/dd HH:mm:ss.S" ) ) );
         this.lastRow.set( valueList );
 
@@ -257,6 +257,10 @@ public class GenerateRowWrapper {
     this.streamRows.set( false );
   }
 
+  public Dataset<Row> getRdd() {
+    return this.grs.getRddStream();
+  }
+
    /** main for running integration test of GenerateRowWrapper as a spark application.
     *
     * @param args - Not used
@@ -283,7 +287,6 @@ public class GenerateRowWrapper {
     rdd1.javaRDD().collect().forEach( System.out::println );
     System.out.println( "Count=" + rdd1.count() );
 
-    /*
 
     // Smoke test running two streams a the same time.
     Dataset<Row> rdd2 = grw2.setupContinuousStreaming( names,
@@ -299,10 +302,10 @@ public class GenerateRowWrapper {
       // "clone" the rdd
       // TODO should I create a helper select that only returns one row?: yes base on Restful service Use case
       // TODO should I create a call back function that works of the timer instead of polling?
-      Dataset<Row> rdd2c = rdd2.select( "Now", "TwoSecondsAgo" );
-      Dataset<Row> rdd3c = rdd3.select( "Now", "FourSecondsAgo" );
-      System.out.println( "rdd2c count:" + rdd2c.count() );
-      System.out.println( "rdd3c count:" + rdd3c.count() );
+      Dataset<Row> rdd2d = grw2.getRdd().select("Now", "TwoSecondsAgo");
+      Dataset<Row> rdd3d = grw3.getRdd().select("Now", "FourSecondsAgo");
+      rdd2d.show(false);
+      rdd3d.show(false );
       try {
         Thread.sleep( 1000 );
       } catch ( java.lang.InterruptedException ex ) {
@@ -311,6 +314,5 @@ public class GenerateRowWrapper {
     }
     grw2.stopContinousStreaming();
     grw3.stopContinousStreaming();
-    */
   }
 }
